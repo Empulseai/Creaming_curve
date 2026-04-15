@@ -1,7 +1,4 @@
-import os
-import random
 from io import BytesIO
-from datetime import datetime, date
 
 import numpy as np
 import pandas as pd
@@ -14,216 +11,40 @@ from pptx.util import Inches
 
 
 # --------------------------------------------------
-# PAGE STYLE
+# PAGE CONFIG
 # --------------------------------------------------
-# st.set_page_config(page_title="EI Matrix Tool", layout="wide")
+st.set_page_config(page_title="Creaming Curve Analyzer", layout="wide")
 
-# st.markdown(
-#     """
-#     <style>
-#         body {
-#             background-color: #f4f4f4;
-#             font-family: 'Helvetica Neue', sans-serif;
-#         }
-#         .stApp {
-#             background-color: #f4f4f4;
-#         }
-#         h1 {
-#             color: #0078D7;
-#             text-align: center;
-#             font-size: 36px;
-#             font-family: 'Georgia', serif;
-#         }
-#         h4 {
-#             text-align: center;
-#             color: #444;
-#             font-family: 'Verdana', sans-serif;
-#         }
-#         .stDataFrame {
-#             background-color: white;
-#             border-radius: 10px;
-#             padding: 10px;
-#         }
-#     </style>
-#     """,
-#     unsafe_allow_html=True,
-# )
+st.markdown(
+    """
+    <style>
+        body {
+            background-color: #f4f4f4;
+            font-family: 'Helvetica Neue', sans-serif;
+        }
+        .stApp {
+            background-color: #f4f4f4;
+        }
+        h1 {
+            color: #0078D7;
+            text-align: center;
+            font-size: 36px;
+            font-family: 'Georgia', serif;
+        }
+        .stDataFrame {
+            background-color: white;
+            border-radius: 10px;
+            padding: 10px;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 # --------------------------------------------------
 # HELPERS
 # --------------------------------------------------
-def generate_random_color():
-    return (
-        random.randint(128, 255),
-        random.randint(128, 255),
-        random.randint(128, 255),
-    )
-
-
-def rgb_to_hex(rgb):
-    return "#{:02x}{:02x}{:02x}".format(*rgb)
-
-
-def prepare_ei_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    required_cols = ["Category", "Ideas", "Effort", "Impact"]
-    missing = [c for c in required_cols if c not in df.columns]
-    if missing:
-        raise ValueError(f"Missing required columns: {', '.join(missing)}")
-
-    df = df.copy()
-    df["Count of the category"] = df["Category"].map(df["Category"].value_counts())
-    df = df.sort_values(by=["Count of the category", "Category"], ascending=False).reset_index(drop=True)
-    df["Sl No"] = range(1, len(df) + 1)
-    df["Effort1"] = np.where(df["Effort"].astype(str).str.strip().str.lower() == "high", 1.5, 0.5)
-    df["Impact1"] = np.where(df["Impact"].astype(str).str.strip().str.lower() == "high", 1.5, 0.5)
-    return df
-
-
-def plot_cluster_cards(df: pd.DataFrame, title: str, color_mapping: dict):
-    fig, ax = plt.subplots(figsize=(16, max(5, len(df) * 0.5)))
-    ax.axis("off")
-    ax.set_title(title, fontsize=14, fontweight="bold")
-
-    if df.empty:
-        ax.text(0.5, 0.5, "No data available", ha="center", va="center", fontsize=12)
-        st.pyplot(fig)
-        return
-
-    y = len(df)
-    for _, row in df.iterrows():
-        category = str(row["Category"])
-        idea = str(row["Ideas"])
-        sl_no = row["Sl No"]
-        box_color = rgb_to_hex(color_mapping[category])
-
-        text = f"{sl_no}\n{category}\n\n{idea}"
-        ax.text(
-            0.02,
-            y,
-            text,
-            fontsize=9,
-            va="top",
-            ha="left",
-            bbox=dict(boxstyle="round,pad=0.4", facecolor=box_color, edgecolor="black"),
-        )
-        y -= 1
-
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0, len(df) + 1)
-    st.pyplot(fig)
-
-
-def plot_ei_matrix(df: pd.DataFrame, color_mapping: dict):
-    fig, ax = plt.subplots(figsize=(14, 10))
-
-    ax.set_facecolor((242 / 255, 242 / 255, 242 / 255))
-    ax.set_title("EI MATRIX", fontsize=16, fontweight="bold")
-    ax.set_xlabel("EFFORT", fontsize=12, fontweight="bold")
-    ax.set_ylabel("IMPACT", fontsize=12, fontweight="bold")
-
-    ax.set_xlim(0, 2)
-    ax.set_ylim(0, 2)
-
-    ax.set_xticks(np.arange(0, 2.1, 0.5))
-    ax.set_xticklabels([" ", "Low", " ", "High", " "])
-
-    ax.set_yticks(np.arange(0, 2.1, 0.5))
-    ax.set_yticklabels([" ", "Low", " ", "High", " "])
-
-    ax.axvline(x=1, color="black", linewidth=1.5, linestyle="--")
-    ax.axhline(y=1, color="black", linewidth=1.5, linestyle="--")
-
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_linewidth(2)
-    ax.spines["bottom"].set_linewidth(2)
-
-    quadrant_labels = [
-        ("Quick Wins", 0.5, 1.5),
-        ("Major Projects", 1.5, 1.5),
-        ("Fill Ins", 0.5, 0.5),
-        ("Time Wasters", 1.5, 0.5),
-    ]
-
-    for label, x, y in quadrant_labels:
-        ax.text(x, y + 0.38, label, ha="center", va="center", fontsize=12, fontweight="bold")
-
-    # Spread labels a bit inside each quadrant
-    quadrant_offsets = {
-        (0.5, 1.5): [],
-        (0.5, 0.5): [],
-        (1.5, 1.5): [],
-        (1.5, 0.5): [],
-    }
-
-    for _, row in df.iterrows():
-        x = row["Effort1"]
-        y = row["Impact1"]
-        quadrant_offsets[(x, y)].append(row)
-
-    for (x, y), rows in quadrant_offsets.items():
-        total = len(rows)
-        if total == 0:
-            continue
-
-        for idx, row in enumerate(rows):
-            dx = ((idx % 4) - 1.5) * 0.18
-            dy = -((idx // 4) * 0.12)
-            color = rgb_to_hex(color_mapping[str(row["Category"])])
-            label = f'{row["Sl No"]}: {row["Category"]}'
-
-            ax.text(
-                x + dx,
-                y + dy,
-                label,
-                fontsize=8,
-                ha="center",
-                va="center",
-                bbox=dict(boxstyle="round,pad=0.25", facecolor=color, edgecolor="black"),
-            )
-
-    return fig
-
-
-def create_ei_excel(df: pd.DataFrame) -> BytesIO:
-    output = BytesIO()
-
-    quick_wins = df[(df["Effort1"] == 0.5) & (df["Impact1"] == 1.5)].copy()
-    fill_ins = df[(df["Effort1"] == 0.5) & (df["Impact1"] == 0.5)].copy()
-    major_projects = df[(df["Effort1"] == 1.5) & (df["Impact1"] == 1.5)].copy()
-    time_wasters = df[(df["Effort1"] == 1.5) & (df["Impact1"] == 0.5)].copy()
-
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="All Ideas")
-        quick_wins.to_excel(writer, index=False, sheet_name="Quick Wins")
-        fill_ins.to_excel(writer, index=False, sheet_name="Fill Ins")
-        major_projects.to_excel(writer, index=False, sheet_name="Major Projects")
-        time_wasters.to_excel(writer, index=False, sheet_name="Time Wasters")
-
-        for sheet_name in writer.sheets:
-            ws = writer.sheets[sheet_name]
-            header_fill = PatternFill(start_color="0000FF", end_color="0000FF", fill_type="solid")
-            header_font = Font(color="FFFFFF", bold=True)
-
-            for cell in ws[1]:
-                cell.fill = header_fill
-                cell.font = header_font
-
-            for column_cells in ws.columns:
-                max_length = 0
-                col_letter = column_cells[0].column_letter
-                for cell in column_cells:
-                    try:
-                        max_length = max(max_length, len(str(cell.value)))
-                    except Exception:
-                        pass
-                ws.column_dimensions[col_letter].width = min(max_length + 2, 50)
-
-    output.seek(0)
-    return output
-
-
 def create_creaming_curve_excel(df: pd.DataFrame, budget: float) -> BytesIO:
     excel_stream = BytesIO()
 
@@ -282,73 +103,6 @@ def create_creaming_curve_ppt(fig, budget: float) -> BytesIO:
 
 
 # --------------------------------------------------
-# EI MATRIX SECTION
-# --------------------------------------------------
-# st.title("EI MATRIX TOOL")
-
-# file_upload1 = st.file_uploader(
-#     "📂 Upload the Excel file for EI matrix",
-#     type=["xlsx"],
-#     accept_multiple_files=False,
-#     key="ei_upload",
-# )
-
-if file_upload1 is not None:
-    try:
-        df_ei = pd.read_excel(file_upload1, sheet_name="Consolidated Ideas")
-        df_ei = prepare_ei_dataframe(df_ei)
-
-        unique_categories = df_ei["Category"].unique()
-        color_mapping = {category: generate_random_color() for category in unique_categories}
-
-        st.subheader("Processed Data")
-        st.data_editor(df_ei, use_container_width=True)
-
-        st.subheader("Quadrant Summary")
-
-        quick_wins = df_ei[(df_ei["Effort1"] == 0.5) & (df_ei["Impact1"] == 1.5)].copy()
-        fill_ins = df_ei[(df_ei["Effort1"] == 0.5) & (df_ei["Impact1"] == 0.5)].copy()
-        major_projects = df_ei[(df_ei["Effort1"] == 1.5) & (df_ei["Impact1"] == 1.5)].copy()
-        time_wasters = df_ei[(df_ei["Effort1"] == 1.5) & (df_ei["Impact1"] == 0.5)].copy()
-
-        col1, col2 = st.columns(2)
-        with col1:
-            plot_cluster_cards(quick_wins, "Quick Wins", color_mapping)
-            plot_cluster_cards(fill_ins, "Fill Ins", color_mapping)
-        with col2:
-            plot_cluster_cards(major_projects, "Major Projects", color_mapping)
-            plot_cluster_cards(time_wasters, "Time Wasters", color_mapping)
-
-        st.subheader("EI Matrix")
-        ei_fig = plot_ei_matrix(df_ei, color_mapping)
-        st.pyplot(ei_fig)
-
-        # Download EI matrix image
-        ei_img = BytesIO()
-        ei_fig.savefig(ei_img, format="png", bbox_inches="tight")
-        ei_img.seek(0)
-
-        st.download_button(
-            "📥 Download EI Matrix Image",
-            ei_img,
-            "ei_matrix.png",
-            "image/png",
-        )
-
-        # Download EI excel
-        ei_excel = create_ei_excel(df_ei)
-        st.download_button(
-            "📥 Download EI Matrix Excel",
-            ei_excel,
-            "ei_matrix_output.xlsx",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
-
-    except Exception as e:
-        st.error(f"Error while processing EI Matrix file: {e}")
-
-
-# --------------------------------------------------
 # CREAMING CURVE SECTION
 # --------------------------------------------------
 st.title("Creaming Curve Analyzer")
@@ -357,7 +111,6 @@ file = st.file_uploader(
     "📂 Upload Excel file for Creaming curve",
     type=["xlsx"],
     help="Ensure the file contains relevant cost and savings data",
-    key="creaming_curve_upload",
 )
 
 if file is not None:
@@ -372,7 +125,6 @@ if file is not None:
         else:
             df = st.data_editor(df, num_rows="dynamic", use_container_width=True)
 
-            # Avoid division by zero
             df["Cost $"] = pd.to_numeric(df["Cost $"], errors="coerce").fillna(0)
             df["Annual Savings $ K"] = pd.to_numeric(df["Annual Savings $ K"], errors="coerce").fillna(0)
 
@@ -394,7 +146,11 @@ if file is not None:
                 use_container_width=True,
             )
 
-            budget = st.number_input("💰 Enter your budget ($ K):", min_value=0.0, step=100.0)
+            budget = st.number_input(
+                "💰 Enter your budget ($ K):",
+                min_value=0.0,
+                step=100.0
+            )
 
             fig, ax = plt.subplots(figsize=(12, 6))
             fig.patch.set_facecolor("#f4f4f4")
