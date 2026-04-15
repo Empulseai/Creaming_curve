@@ -16,38 +16,38 @@ from pptx.util import Inches
 # --------------------------------------------------
 # PAGE STYLE
 # --------------------------------------------------
-st.set_page_config(page_title="EI Matrix Tool", layout="wide")
+# st.set_page_config(page_title="EI Matrix Tool", layout="wide")
 
-st.markdown(
-    """
-    <style>
-        body {
-            background-color: #f4f4f4;
-            font-family: 'Helvetica Neue', sans-serif;
-        }
-        .stApp {
-            background-color: #f4f4f4;
-        }
-        h1 {
-            color: #0078D7;
-            text-align: center;
-            font-size: 36px;
-            font-family: 'Georgia', serif;
-        }
-        h4 {
-            text-align: center;
-            color: #444;
-            font-family: 'Verdana', sans-serif;
-        }
-        .stDataFrame {
-            background-color: white;
-            border-radius: 10px;
-            padding: 10px;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+# st.markdown(
+#     """
+#     <style>
+#         body {
+#             background-color: #f4f4f4;
+#             font-family: 'Helvetica Neue', sans-serif;
+#         }
+#         .stApp {
+#             background-color: #f4f4f4;
+#         }
+#         h1 {
+#             color: #0078D7;
+#             text-align: center;
+#             font-size: 36px;
+#             font-family: 'Georgia', serif;
+#         }
+#         h4 {
+#             text-align: center;
+#             color: #444;
+#             font-family: 'Verdana', sans-serif;
+#         }
+#         .stDataFrame {
+#             background-color: white;
+#             border-radius: 10px;
+#             padding: 10px;
+#         }
+#     </style>
+#     """,
+#     unsafe_allow_html=True,
+# )
 
 
 # --------------------------------------------------
@@ -284,14 +284,14 @@ def create_creaming_curve_ppt(fig, budget: float) -> BytesIO:
 # --------------------------------------------------
 # EI MATRIX SECTION
 # --------------------------------------------------
-st.title("EI MATRIX TOOL")
+# st.title("EI MATRIX TOOL")
 
-file_upload1 = st.file_uploader(
-    "📂 Upload the Excel file for EI matrix",
-    type=["xlsx"],
-    accept_multiple_files=False,
-    key="ei_upload",
-)
+# file_upload1 = st.file_uploader(
+#     "📂 Upload the Excel file for EI matrix",
+#     type=["xlsx"],
+#     accept_multiple_files=False,
+#     key="ei_upload",
+# )
 
 if file_upload1 is not None:
     try:
